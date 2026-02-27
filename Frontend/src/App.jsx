@@ -4,7 +4,7 @@ import './App.css'
 import FaceExpression from './feature/expression/components/FaceExpression'
 
 function App() {
-  const [count, setCount] = useState(0)
+  
 
   return (
     <FaceExpression />

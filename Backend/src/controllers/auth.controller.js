@@ -1,0 +1,81 @@
+const userModel = require("../models/user.model")
+const bcrypt = require("bcrypt")
+const jwt  = require("jsonwebtoken")
+
+async function registerUser(req,res){
+    const{username,email,password} = req.body;
+
+    const isAllreadyRegister = await userModel.findOne({
+        $or:[
+            {email},
+            {userName:username}
+        ]
+    })
+    if(isAllreadyRegister){
+        res.status(400).json({
+            message:"user with the same name or email already exists"
+        })
+    }
+    const hash  = await bcrypt.hash(password,10)
+
+    const user = new userModel({
+        userName:username,
+        email,
+        password:hash
+    })
+    await user.save()
+    res.status(201).json({
+        message:"user registered successfully",
+        user:user
+    })
+    const token = jwt.sign({
+        id:user._id,
+        userName:user.userName,
+    },process.env.JWT_SECRET_KEY,{expiresIn:"1h"})
+
+    res.cookie("token",token)
+
+    return res.status(201).json({
+        message:"user registered successfully",
+        id : user._id,
+        userName:user.userName,
+        email:user.email
+    })
+}
+
+async function loginUser(req,res){
+    const {email,password,userName} = req.body
+
+    const user = await userModel.findOne({
+        $or:[
+            {email},
+            {userName}
+        ]
+    })  
+    if(!user){
+        return res.status(400).json({
+            message:"invalid Credential"
+        })
+    }
+    const isPassswordValid = await bcrypt.compare(password,user.password)
+    if(!isPassswordValid){
+        return res.status(400).json({
+            message:"invalid Credential"
+        })
+    }
+    const token = jwt.sign({
+        id:user._id,
+        userName:user.userName,
+    },process.env.JWT_SECRET_KEY,{expiresIn:"1h"})
+
+    res.cookie("token",token)
+
+    return res.status(200).json({
+        message:"user logged in successfully",
+        id : user._id,
+        userName:user.userName,
+        email:user.email,
+    })
+}
+
+module.exports = {registerUser,loginUser}
